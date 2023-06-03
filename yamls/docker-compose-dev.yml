@@ -1,0 +1,40 @@
+version: "3.8"
+
+services:
+  frontend:
+    image: profileorg/profile-fe-dev
+    ports:
+      - '80:80'
+    restart: unless-stopped
+    networks:
+      - internet
+      
+  backend:
+    image: profileorg/profile-be-dev
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - PROFILE_DatabaseSettings__ConnectionString=Server=postgres;Port=5432;Database=mydb;User ID=profiledev;Password=supadevsecret;
+    networks:
+      - internet
+      - no-internet
+
+  postgres:
+    image: postgres:alpine
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=profiledev
+      - POSTGRES_PASSWORD=supadevsecret
+      - POSTGRES_DB=mydb
+    volumes:
+      - pg_data:/var/lib/postgresql
+    networks:
+      - no-internet
+
+volumes:
+  - pg_data:
+
+networks:
+  internet: {}
+  no-internet:
+    internal: true
