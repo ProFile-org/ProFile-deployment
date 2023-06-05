@@ -1,3 +1,3 @@
 output "public_ip" {
-    value = profileorg.ipv4_address
+    value = digitalocean_droplet.profileorg.ipv4_address
 }
