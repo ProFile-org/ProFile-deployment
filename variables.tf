@@ -1,3 +1,14 @@
-variable "do_token" {}
+variable "do_token" {
+  type      = string
+  sensitive = true
+}
 
-variable "my_ssh_key" {}
+variable "zone_id" {
+  type      = string
+  sensitive = true
+}
+
+variable "cloudflare_api_token" {
+  type      = string
+  sensitive = true
+}
