@@ -9,17 +9,27 @@ resource "digitalocean_ssh_key" "profileorg" {
 }
 
 resource "digitalocean_droplet" "profileorg_dev" {
-  image    = "ubuntu-22-04-x64"
-  name     = "ProFileOrg-dev"
-  region   = "sgp1"
-  size     = "s-1vcpu-1gb"
+  image    = local.instance.image
+  name     = local.instance.name
+  region   = local.instance.region
+  size     = local.instance.size
   ssh_keys = [digitalocean_ssh_key.profileorg.fingerprint]
 }
 
 resource "cloudflare_record" "profileorg_dev" {
   depends_on = [digitalocean_droplet.profileorg_dev]
   zone_id    = var.zone_id
-  name       = "profileorg-dev"
+  name       = local.instance.dns_record.base
   value      = digitalocean_droplet.profileorg_dev.ipv4_address
   type       = "A"
+  proxied    = true
+}
+
+resource "cloudflare_record" "profileorg_dev_api" {
+  depends_on = [digitalocean_droplet.profileorg_dev]
+  zone_id    = var.zone_id
+  name       = local.instance.dns_record.api
+  value      = digitalocean_droplet.profileorg_dev.ipv4_address
+  type       = "A"
+  proxied    = true
 }
