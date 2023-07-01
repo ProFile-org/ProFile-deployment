@@ -1,5 +1,5 @@
 output "public_ip" {
-  value = digitalocean_droplet.profileorg_dev.ipv4_address
+  value     = digitalocean_droplet.profileorg_dev.ipv4_address
   sensitive = true
 }
 

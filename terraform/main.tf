@@ -22,7 +22,7 @@ resource "cloudflare_record" "profileorg_dev" {
   name       = local.instance.dns_record.base
   value      = digitalocean_droplet.profileorg_dev.ipv4_address
   type       = "A"
-  proxied = true
+  proxied    = true
 }
 
 resource "cloudflare_record" "profileorg_dev_api" {
@@ -31,5 +31,5 @@ resource "cloudflare_record" "profileorg_dev_api" {
   name       = local.instance.dns_record.api
   value      = digitalocean_droplet.profileorg_dev.ipv4_address
   type       = "A"
-  proxied = true
+  proxied    = true
 }
