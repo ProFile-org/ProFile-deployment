@@ -7,6 +7,7 @@ locals {
     dns_record = {
       base = "dev-profileorg"
       api  = "api-dev-profileorg"
+      traefik = "traefik-dev-profileorg"
     }
   }
 }

@@ -33,3 +33,12 @@ resource "cloudflare_record" "profileorg_dev_api" {
   type       = "A"
   proxied    = true
 }
+
+resource "cloudflare_record" "traefik" {
+  depends_on = [digitalocean_droplet.profileorg_dev]
+  zone_id    = var.zone_id
+  name       = local.instance.dns_record.traefik
+  value      = digitalocean_droplet.profileorg_dev.ipv4_address
+  type       = "A"
+  proxied    = true
+}
