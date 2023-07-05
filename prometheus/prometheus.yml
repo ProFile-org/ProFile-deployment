@@ -1,0 +1,29 @@
+global:
+  scrape_interval:     5s
+  evaluation_interval: 5s
+  external_labels:
+      monitor: 'profile'
+
+rule_files:
+  - 'alert.rules'
+
+scrape_configs:
+  - job_name: 'prometheus'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['localhost:9090']
+
+  - job_name: 'traefik'
+    metrics_path: /metrics
+    static_configs:
+      - targets: ['reverse-proxy:8080']
+
+  - job_name: 'cadvisor'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['cadvisor:8080']
+
+  - job_name: 'nodeexporter'
+    scrape_interval: 5s
+    static_configs:
+      - targets: ['nodeexporter:9100']
