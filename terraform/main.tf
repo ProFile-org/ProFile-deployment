@@ -41,4 +41,5 @@ resource "cloudflare_record" "traefik" {
   value      = digitalocean_droplet.profileorg_dev.ipv4_address
   type       = "A"
   proxied    = true
+
 }
