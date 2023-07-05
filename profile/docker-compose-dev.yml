@@ -146,6 +146,7 @@ services:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_USER}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS}
       GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
     labels:
       - "traefik.http.routers.grafana.rule=Host(`${DOMAIN_GRAFANA}`)"
       - "traefik.http.routers.grafana.entrypoints=https"
