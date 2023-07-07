@@ -62,13 +62,28 @@
         state: present
         update_cache: true
 
+    - name: Copy prometheus configs
+      ansible.builtin.copy:
+        src: ../../prometheus/
+        dest: prometheus/
+        remote_src: false
+        directory_mode: '0755'
+        mode: '0755'
+
+    - name: Copy grafana configs
+      ansible.builtin.copy:
+        src: ../../grafana/
+        dest: grafana/
+        remote_src: false
+        directory_mode: '0755'
+        mode: '0755'
+
     - name: Copy .env file
       ansible.builtin.copy:
         src: ../../profile/.env
         dest: .env
         remote_src: false
         mode: '0755'
-
 
     - name: Copy docker compose file
       ansible.builtin.copy:

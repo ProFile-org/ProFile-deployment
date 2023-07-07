@@ -3,6 +3,7 @@ version: "3.8"
 services:
   frontend:
     image: profileorg/profile-fe-dev
+    container_name: profile_frontend
     expose:
       - 80
     restart: unless-stopped
@@ -13,17 +14,29 @@ services:
       - "traefik.http.routers.frontend.entrypoints=https"
       - "traefik.http.routers.frontend.tls=true"
       - "traefik.http.routers.frontend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.frontend.service=frontend"
+      - "traefik.http.services.frontend.loadbalancer.server.port=80"
 
   reverse-proxy:
     image: traefik:v2.10
-    # Enables the web UI and tells Traefik to listen to docker
+    container_name: traefik
     restart: unless-stopped
     command: 
       - "--entrypoints.http.address=:80"
       - "--entrypoints.https.address=:443"
-      - "--api.insecure=true"
+      - "--api.insecure=false"
+      - "--api.dashboard=true"
       - "--providers.docker"
+      - "--providers.docker.watch"
       - "--api=true"
+      - "--log=true"
+      - "--log.filePath=/logs/traefik.log"
+      - "--log.level=DEBUG"
+      - "--metrics.prometheus=true"
+      - "--metrics.prometheus.buckets=0.1,0.3,1.2,5.0"
+      - "--accessLog=true"
+      - "--accessLog.filePath=/logs/access.log"
+      - "--accessLog.filters.statusCodes=204-299,400-499,500-599"
       - "--certificatesresolvers.letsencrypt.acme.email=${CF_API_EMAIL}"
       - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
       - "--certificatesresolvers.letsencrypt.acme.dnschallenge=true"
@@ -33,21 +46,36 @@ services:
     environment:
       - CF_API_EMAIL=${CF_API_EMAIL}
       - CF_API_KEY=${CF_API_KEY}
+    labels:
+      - "traefik.http.routers.reverse-proxy-rtr.rule=Host(`${DOMAIN_TRAEFIK}`)"
+      - "traefik.http.routers.reverse-proxy-rtr.entrypoints=https"
+      - "traefik.http.routers.reverse-proxy-rtr.tls=true"
+      - "traefik.http.routers.reverse-proxy-rtr.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.reverse-proxy-rtr.service=api@internal"
+      - "traefik.http.middlewares.traefik-auth.basicauth.users=${TRAEFIK_AUTH}"
+      - "traefik.http.middlewares.traefik-auth.basicauth.removeheader=true"
+      - "traefik.http.routers.reverse-proxy-rtr.middlewares=traefik-auth"
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
     ports:
       # The HTTP port
       - "80:80"
       - "443:443"
       # The Web UI (enabled by --api.insecure=true)
-      - "8080:8080"
+      # - "8080:8080"
     volumes:
       # So that Traefik can listen to the Docker events
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./letsencrypt:/letsencrypt
+      - traefik-logs:/logs
     networks:
       - internet
       
   backend:
     image: profileorg/profile-be-dev
+    container_name: profile_backend
     expose:
       - 80
     labels:
@@ -55,17 +83,22 @@ services:
       - "traefik.http.routers.backend.entrypoints=https"
       - "traefik.http.routers.backend.tls=true"
       - "traefik.http.routers.backend.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.backend.service=backend"
+      - "traefik.http.services.backend.loadbalancer.server.port=80"
     restart: unless-stopped
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - PROFILE_DatabaseSettings__ConnectionString=Server=postgres;Port=5432;Database=${PG_DATABASE};User ID=${PG_USERNAME};Password=${PG_PASSWORD};
       - BASE_FRONTEND_URL=https://${DOMAIN_FRONTEND}
+    depends_on:
+      - postgres
     networks:
       - internet
       - no-internet
 
   postgres:
     image: postgres:alpine
+    container_name: postgres
     restart: unless-stopped
     expose:
       - 5432
@@ -78,8 +111,107 @@ services:
     networks:
       - no-internet
 
+  prometheus:
+    image: prom/prometheus
+    container_name: prometheus
+    user: root
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prom-logs:/prometheus/
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.size=512MB"
+    labels:
+      - "traefik.http.routers.prometheus.rule=Host(`${DOMAIN_PROM}`)"
+      - "traefik.http.routers.prometheus.entrypoints=https"
+      - "traefik.http.routers.prometheus.tls=true"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.prometheus.service=prometheus"
+      - "traefik.http.routers.prometheus.middlewares=traefik-auth"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+    networks:
+      - internet
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    depends_on:
+      - prometheus
+    volumes:
+      - grafana:/var/lib/grafana
+      - ./grafana:/etc/grafana/provisioning
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASS}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_INSTALL_PLUGINS: grafana-piechart-panel
+      GF_COOKIE_SECURE: "true"
+    labels:
+      - "traefik.http.routers.grafana.rule=Host(`${DOMAIN_GRAFANA}`)"
+      - "traefik.http.routers.grafana.entrypoints=https"
+      - "traefik.http.routers.grafana.tls=true"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.grafana.service=grafana"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+    networks:
+      - internet
+    restart: unless-stopped
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:latest
+    container_name: cadvisor
+    restart: unless-stopped
+    expose:
+      - 8080
+    devices:
+      - /dev/kmsg:/dev/kmsg
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:rw
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+      - /cgroup:/cgroup:ro
+    labels:
+      - "org.label-schema.group=monitoring"
+    networks:
+      - internet
+      - no-internet
+
+  nodeexporter:
+    image: prom/node-exporter:v1.6.0
+    container_name: nodeexporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    expose:
+      - 9100
+    labels:
+      - "org.label-schema.group=monitoring"
+    networks:
+      - internet
+
 volumes:
   pg_data:
+  traefik-logs:
+  prom-logs:
+  grafana:
 
 networks:
   internet: {}
