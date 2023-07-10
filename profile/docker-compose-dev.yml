@@ -90,6 +90,10 @@ services:
       - ASPNETCORE_ENVIRONMENT=Development
       - PROFILE_DatabaseSettings__ConnectionString=Server=postgres;Port=5432;Database=${PG_DATABASE};User ID=${PG_USERNAME};Password=${PG_PASSWORD};
       - BASE_FRONTEND_URL=https://${DOMAIN_FRONTEND}
+      - PROFILE_JweSettings__SigningKeyId=${JWE_SIGNING_KEY_ID}
+      - PROFILE_JweSettings__EncryptionKeyId=${JWE_ENCRYPTION_KEY_ID}
+      - PROFILE_JweSettings__TokenLifetime=${JWE_TOKEN_LIFE_TIME}
+      - PROFILE_JweSettings__RefreshTokenLifetimeInDays=${JWE_REFRESH_TOKEN_LIFETIME_IN_DAYS}
     depends_on:
       - postgres
     networks:
