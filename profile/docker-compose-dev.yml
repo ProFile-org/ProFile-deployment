@@ -94,6 +94,8 @@ services:
       - PROFILE_JweSettings__EncryptionKeyId=${JWE_ENCRYPTION_KEY_ID}
       - PROFILE_JweSettings__TokenLifetime=${JWE_TOKEN_LIFE_TIME}
       - PROFILE_JweSettings__RefreshTokenLifetimeInDays=${JWE_REFRESH_TOKEN_LIFETIME_IN_DAYS}
+      - PROFILE_Serilog__WriteTo__0__Args__connectionString=Server=postgres;Port=5432;Database=${PG_DATABASE};User ID=${PG_USERNAME};Password=${PG_PASSWORD};
+      - PROFILE_SecuritySettings__Pepper=${PEPPER}
     depends_on:
       - postgres
     networks:
