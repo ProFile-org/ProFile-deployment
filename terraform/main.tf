@@ -4,16 +4,18 @@ resource "tls_private_key" "ssh_key" {
 }
 
 resource "digitalocean_ssh_key" "profileorg" {
+  depends_on = [tls_private_key.ssh_key]
   name       = "Terraform ssh key"
   public_key = tls_private_key.ssh_key.public_key_openssh
 }
 
 resource "digitalocean_droplet" "profileorg_dev" {
-  image    = local.instance.image
-  name     = local.instance.name
-  region   = local.instance.region
-  size     = local.instance.size
-  ssh_keys = [digitalocean_ssh_key.profileorg.fingerprint]
+  depends_on = [digitalocean_ssh_key.profileorg]
+  image      = local.instance.image
+  name       = local.instance.name
+  region     = local.instance.region
+  size       = local.instance.size
+  ssh_keys   = [digitalocean_ssh_key.profileorg.fingerprint]
 }
 
 resource "cloudflare_record" "profile" {
