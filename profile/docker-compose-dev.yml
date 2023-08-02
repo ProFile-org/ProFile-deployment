@@ -2,7 +2,7 @@ version: "3.8"
 
 services:
   frontend:
-    image: profileorg/profile-fe-dev
+    image: profileorg/profile-fe-dev:demo
     container_name: profile_frontend
     expose:
       - 80

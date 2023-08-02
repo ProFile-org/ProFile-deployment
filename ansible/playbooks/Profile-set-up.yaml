@@ -83,7 +83,7 @@
         src: ../../profile/.env
         dest: .env
         remote_src: false
-        mode: '0755'
+        mode: '0655'
 
     - name: Copy docker compose file
       ansible.builtin.copy:
